@@ -79,8 +79,9 @@ models:
                 inclusive: true
   - name: stg_ens__incident
     description: >
-      ServiceNow-shaped incidents. cmdb_ci_raw is preserved and cmdb_ci_clean is
-      the canonicalised form; resolution to a device happens in int_ens__ci_resolved.
+      ServiceNow-shaped incidents. cmdb_ci_raw preserves the source value and
+      cmdb_ci_clean is the canonicalised form for downstream matching.
+
     columns:
       - name: incident_number
         tests: [unique, not_null]

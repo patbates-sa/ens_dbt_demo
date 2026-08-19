@@ -20,8 +20,8 @@ renamed as (
         assignment_group,
         short_description,
 
-        -- The raw dirty key is preserved, and the canonicalised form is derived
-        -- once here. Resolution logic lives in int_ens__ci_resolved, not in staging.
+        -- Preserve the raw dirty key and derive its canonical form once here.
+
         cmdb_ci                                              as cmdb_ci_raw,
         lower(trim(cmdb_ci))                                 as cmdb_ci_clean,
 
