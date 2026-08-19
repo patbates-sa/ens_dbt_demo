@@ -7,3 +7,78 @@ models:
       - name: date_hour
         description: Standard hourly join key for MetricFlow time-based queries.
         tests: [unique, not_null]
+
+  - name: fct_incident_telemetry
+    description: >
+      One row per S1 or S2 incident that resolves to a known inventory device,
+      enriched with monitored interface conditions during the hour before the
+      incident opened. Incidents without telemetry are retained with null metrics.
+    columns:
+      - name: incident_number
+        description: ServiceNow incident identifier and primary key for the fact table.
+        tests: [unique, not_null]
+      - name: opened_ts
+        description: Timestamp when the incident opened.
+        tests: [not_null]
+      - name: resolved_ts
+        description: Timestamp when the incident was resolved; null for unresolved incidents.
+      - name: severity
+        description: Incident severity; this mart contains only S1 and S2 incidents.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['S1', 'S2']
+      - name: assignment_group
+        description: Operational group assigned to the incident.
+      - name: device_id
+        description: Inventory device resolved from the incident configuration item.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ens__device')
+                field: device_id
+      - name: site_code
+        description: Site associated with the resolved inventory device.
+      - name: avg_util_out
+        description: Average outbound interface utilization percentage in the preceding hour.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+                inclusive: true
+      - name: peak_util_out
+        description: Peak outbound interface utilization percentage in the preceding hour.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+                inclusive: true
+      - name: errors
+        description: Total inbound and outbound interface errors in the preceding hour.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+      - name: peak_latency_p95
+        description: Highest observed p95 interface latency in milliseconds in the preceding hour.
+      - name: peak_loss
+        description: Highest observed packet loss percentage in the preceding hour.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+                inclusive: true
+      - name: failed_polls
+        description: Count of telemetry polls whose status was not ok in the preceding hour.
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+      - name: minutes_to_resolve
+        description: Whole minutes from incident opening to resolution; null while unresolved.

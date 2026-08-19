@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: int_incident_telemetry__resolved_incidents
+    description: >
+      S1 and S2 incidents resolved to inventory devices by exact match between
+      canonical cmdb_ci and hostname. Incidents without a clean device match are
+      intentionally excluded. One row per resolved incident.
+    columns:
+      - name: incident_number
+        description: ServiceNow incident identifier and primary key at this grain.
+        tests: [unique, not_null]
+      - name: opened_ts
+        description: Timestamp when the incident opened.
+        tests: [not_null]
+      - name: resolved_ts
+        description: Timestamp when the incident was resolved; null for unresolved incidents.
+      - name: severity
+        description: Incident severity, limited here to S1 and S2.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['S1', 'S2']
+      - name: assignment_group
+        description: Operational group assigned to the incident.
+      - name: device_id
+        description: Inventory device matched from the incident's canonical configuration item.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ens__device')
+                field: device_id
+      - name: site_code
+        description: Site associated with the matched inventory device.
+      - name: minutes_to_resolve
+        description: Whole minutes from incident opening to resolution; null while unresolved.
+
+  - name: int_incident_telemetry__interface_metrics_1h
+    description: >
+      Interface telemetry from the hour before each resolved incident opened,
+      restricted to monitored interfaces and aggregated to one row per incident.
+      Incidents with no qualifying metric rows are absent from this model.
+    columns:
+      - name: incident_number
+        description: Incident identifier and primary key at this aggregate grain.
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_incident_telemetry__resolved_incidents')
+                field: incident_number
+      - name: avg_util_out
+        description: Average outbound interface utilization percentage during the lookback hour.
+      - name: peak_util_out
+        description: Maximum outbound interface utilization percentage during the lookback hour.
+      - name: errors
+        description: Sum of inbound and outbound interface errors during the lookback hour.
+      - name: peak_latency_p95
+        description: Maximum observed p95 interface latency in milliseconds during the lookback hour.
+      - name: peak_loss
+        description: Maximum observed packet loss percentage during the lookback hour.
+      - name: failed_polls
+        description: Count of telemetry polls whose status was not ok during the lookback hour.
