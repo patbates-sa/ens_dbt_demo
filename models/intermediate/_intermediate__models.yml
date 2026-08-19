@@ -1,0 +1,63 @@
+version: 2
+
+models:
+  - name: int_incident_telemetry__resolved_incidents
+    description: >
+      One row per S1 or S2 incident whose canonicalised CMDB CI exactly matches a
+      canonical device hostname. Incidents with free-text, site-prefixed, FQDN-only,
+      or otherwise unmatched CI values are excluded so downstream telemetry joins
+      cannot attribute an incident to the wrong device.
+    columns:
+      - name: incident_number
+        description: The incident identifier retained after a unique device match.
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ens__incident')
+                field: incident_number
+      - name: incident_severity
+        description: The source severity, restricted to the notebook's S1/S2 scope.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['S1', 'S2']
+      - name: device_id
+        description: The device resolved from the incident's canonicalised CMDB CI.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ens__device')
+                field: device_id
+      - name: minutes_to_resolve
+        description: Whole minutes from incident opening to resolution; null while unresolved.
+
+  - name: int_incident_telemetry__interface_metrics_1h
+    description: >
+      One row per resolved incident with monitored-interface telemetry observed during
+      the hour immediately before the incident opened. Incidents with no qualifying
+      telemetry are absent here and restored by the mart's left join.
+    columns:
+      - name: incident_number
+        description: The incident whose one-hour precursor telemetry is aggregated.
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_incident_telemetry__resolved_incidents')
+                field: incident_number
+      - name: avg_util_out
+        description: Average outbound utilization across all qualifying interface polls.
+      - name: peak_util_out
+        description: Highest outbound utilization across all qualifying interface polls.
+      - name: errors
+        description: Sum of inbound and outbound interface errors across qualifying polls.
+      - name: peak_latency_p95
+        description: Highest p95 latency observed across qualifying interface polls.
+      - name: peak_loss
+        description: Highest packet-loss percentage observed across qualifying interface polls.
+      - name: failed_polls
+        description: Count of qualifying interface polls whose status was not successful.
